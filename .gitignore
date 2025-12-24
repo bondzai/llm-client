@@ -1,0 +1,11 @@
+# Binaries
+llm-client
+*.exe
+*.test
+*.out
+
+# Environment variables
+.env
+
+# System
+.DS_Store
