@@ -15,30 +15,39 @@ import (
 )
 
 func main() {
-	// Configure Viper to read from .env file
-	viper.SetConfigFile(".env")
-	viper.ReadInConfig() // Ignore error if .env doesn't exist (relies on system env vars then)
-	viper.AutomaticEnv() // Automatically read environment variables
+	apiKey := loadConfig()
+	ctx := context.Background()
 
-	// 1. Get API Key from environment variable
+	client := createClient(ctx, apiKey)
+	defer client.Close()
+
+	model := configureModel(client)
+
+	runChatSession(ctx, model)
+}
+
+func loadConfig() string {
+	viper.SetConfigFile(".env")
+	viper.ReadInConfig()
+	viper.AutomaticEnv()
+
 	apiKey := viper.GetString("GEMINI_API_KEY")
 	if apiKey == "" {
 		log.Fatal("Error: GEMINI_API_KEY environment variable is not set.\nPlease set it using: export GEMINI_API_KEY=your_key_here")
 	}
+	return apiKey
+}
 
-	ctx := context.Background()
-
-	// 2. Create a new Gemini client
+func createClient(ctx context.Context, apiKey string) *genai.Client {
 	client, err := genai.NewClient(ctx, option.WithAPIKey(apiKey))
 	if err != nil {
 		log.Fatalf("Error creating client: %v", err)
 	}
-	defer client.Close()
+	return client
+}
 
-	// 3. Select the model ("gemini-flash-latest" points to the latest stable flash model)
+func configureModel(client *genai.Client) *genai.GenerativeModel {
 	model := client.GenerativeModel("gemini-flash-latest")
-
-	// Optional: Configure generation settings
 	model.SetTemperature(0.7)
 	topK := int32(40)
 	model.TopK = &topK
@@ -47,49 +56,69 @@ func main() {
 	maxTokens := int32(8192)
 	model.MaxOutputTokens = &maxTokens
 	model.ResponseMIMEType = "text/plain"
+	return model
+}
 
-	fmt.Println("---------------------------------------------------------")
-	fmt.Println("  Gemini Go Client POC (gemini-flash-latest)")
-	fmt.Println("  Type 'quit' or 'exit' to stop.")
-	fmt.Println("---------------------------------------------------------")
+func runChatSession(ctx context.Context, model *genai.GenerativeModel) {
+	printForIntro()
 
-	// 4. Start a chat session (maintains history)
 	cs := model.StartChat()
-	cs.History = []*genai.Content{} // Start with empty history
+	cs.History = []*genai.Content{}
 
 	reader := bufio.NewReader(os.Stdin)
 
 	for {
-		fmt.Print("\nResult > ")
-		userInput, _ := reader.ReadString('\n')
-		userInput = strings.TrimSpace(userInput)
-
-		if userInput == "quit" || userInput == "exit" {
+		input := readInput(reader)
+		if shouldExit(input) {
 			break
 		}
-		if userInput == "" {
+		if input == "" {
 			continue
 		}
 
-		fmt.Print("Gemini > ")
+		streamResponse(ctx, cs, input)
+	}
+}
 
-		// 5. Send message using streaming for better UX
-		iter := cs.SendMessageStream(ctx, genai.Text(userInput))
-		for {
-			resp, err := iter.Next()
-			if err == iterator.Done {
-				break
-			}
-			if err != nil {
-				log.Printf("\nError generating response: %v", err)
-				break
-			}
-			for _, part := range resp.Candidates[0].Content.Parts {
-				if txt, ok := part.(genai.Text); ok {
-					fmt.Print(string(txt))
-				}
-			}
+func printForIntro() {
+	fmt.Println("---------------------------------------------------------")
+	fmt.Println("  Gemini Go Client POC (gemini-flash-latest)")
+	fmt.Println("  Type 'quit' or 'exit' to stop.")
+	fmt.Println("---------------------------------------------------------")
+}
+
+func readInput(reader *bufio.Reader) string {
+	fmt.Print("\nResult > ")
+	userInput, _ := reader.ReadString('\n')
+	return strings.TrimSpace(userInput)
+}
+
+func shouldExit(input string) bool {
+	return input == "quit" || input == "exit"
+}
+
+func streamResponse(ctx context.Context, cs *genai.ChatSession, input string) {
+	fmt.Print("Gemini > ")
+
+	iter := cs.SendMessageStream(ctx, genai.Text(input))
+	for {
+		resp, err := iter.Next()
+		if err == iterator.Done {
+			break
 		}
-		fmt.Println() // Newline after response
+		if err != nil {
+			log.Printf("\nError generating response: %v", err)
+			break
+		}
+		printCandidates(resp)
+	}
+	fmt.Println()
+}
+
+func printCandidates(resp *genai.GenerateContentResponse) {
+	for _, part := range resp.Candidates[0].Content.Parts {
+		if txt, ok := part.(genai.Text); ok {
+			fmt.Print(string(txt))
+		}
 	}
 }
