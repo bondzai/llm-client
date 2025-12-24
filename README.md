@@ -25,8 +25,20 @@ go mod tidy
 
 ### 3. Run the Application
 
-You need to set the `GEMINI_API_KEY` environment variable.
+You can set the `GEMINI_API_KEY` in a `.env` file or export it as an environment variable.
 
+**Option A: Using .env file (Recommended)**
+1. Copy the example file:
+   ```bash
+   cp .env.example .env
+   ```
+2. Edit `.env` and paste your API Key.
+3. Run the app:
+   ```bash
+   go run main.go
+   ```
+
+**Option B: Environment Variable**
 **Mac/Linux:**
 ```bash
 export GEMINI_API_KEY="your_api_key_here"

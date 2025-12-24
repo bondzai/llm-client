@@ -9,13 +9,19 @@ import (
 	"strings"
 
 	"github.com/google/generative-ai-go/genai"
+	"github.com/spf13/viper"
 	"google.golang.org/api/iterator"
 	"google.golang.org/api/option"
 )
 
 func main() {
+	// Configure Viper to read from .env file
+	viper.SetConfigFile(".env")
+	viper.ReadInConfig() // Ignore error if .env doesn't exist (relies on system env vars then)
+	viper.AutomaticEnv() // Automatically read environment variables
+
 	// 1. Get API Key from environment variable
-	apiKey := os.Getenv("GEMINI_API_KEY")
+	apiKey := viper.GetString("GEMINI_API_KEY")
 	if apiKey == "" {
 		log.Fatal("Error: GEMINI_API_KEY environment variable is not set.\nPlease set it using: export GEMINI_API_KEY=your_key_here")
 	}
