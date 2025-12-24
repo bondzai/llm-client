@@ -35,8 +35,8 @@ func main() {
 	}
 	defer client.Close()
 
-	// 3. Select the model (gemini-1.5-flash is free-tier eligible and fast)
-	model := client.GenerativeModel("gemini-1.5-flash")
+	// 3. Select the model (gemini-2.0-flash is available and fast)
+	model := client.GenerativeModel("gemini-2.0-flash")
 
 	// Optional: Configure generation settings
 	model.SetTemperature(0.7)
