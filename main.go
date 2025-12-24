@@ -35,8 +35,8 @@ func main() {
 	}
 	defer client.Close()
 
-	// 3. Select the model (gemini-2.0-flash is available and fast)
-	model := client.GenerativeModel("gemini-2.0-flash")
+	// 3. Select the model ("gemini-flash-latest" points to the latest stable flash model)
+	model := client.GenerativeModel("gemini-flash-latest")
 
 	// Optional: Configure generation settings
 	model.SetTemperature(0.7)
@@ -49,7 +49,7 @@ func main() {
 	model.ResponseMIMEType = "text/plain"
 
 	fmt.Println("---------------------------------------------------------")
-	fmt.Println("  Gemini Go Client POC (gemini-1.5-flash)")
+	fmt.Println("  Gemini Go Client POC (gemini-flash-latest)")
 	fmt.Println("  Type 'quit' or 'exit' to stop.")
 	fmt.Println("---------------------------------------------------------")
 
